@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <!-- Add Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <style>
+        /* Custom Enhancements */
+        body {
+            background-color: #f4f6f9;
+        }
+        .dashboard-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+        }
+        .card-header {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,123,255,0.05);
+            transition: background-color 0.3s ease;
+        }
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        .recent-attempts .list-group-item {
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .recent-attempts .list-group-item:hover {
+            border-left-color: #28a745;
+            background-color: rgba(40,167,69,0.05);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container py-4">
+    <h2 class="text-center mb-4 text-primary">
+        <i class="bi bi-speedometer2 me-2"></i>User Dashboard
+    </h2>
+    
+    <!-- Search Section -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-search me-2"></i>Search Quizzes & Subjects
+            </h4>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('user.dashboard') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="subject_search" class="form-label">
+                            <i class="bi bi-book me-2"></i>Search Subjects
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-book"></i></span>
+                            <input type="text" class="form-control" id="subject_search" name="subject_search" 
+                                   placeholder="Enter subject name" value="{{ request.args.get('subject_search', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="quiz_search" class="form-label">
+                            <i class="bi bi-list-check me-2"></i>Search Quizzes
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-list-check"></i></span>
+                            <input type="text" class="form-control" id="quiz_search" name="quiz_search" 
+                                   placeholder="Enter quiz title" value="{{ request.args.get('quiz_search', '') }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success me-2 btn-action">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <a href="{{ url_for('user.dashboard') }}" class="btn btn-outline-secondary btn-action">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quizzes Section -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-collection me-2"></i>Available Quizzes
+                    </h4>
+                    <span class="badge bg-light text-dark">
+                        {{ quizzes|length }} result(s)
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    {% if quizzes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th><i class="bi bi-list-task me-2"></i>Quiz Title</th>
+                                    <th><i class="bi bi-book-half me-2"></i>Chapter</th>
+                                    <th><i class="bi bi-journal me-2"></i>Subject</th>
+                                    <th><i class="bi bi-calendar-date me-2"></i>Date</th>
+                                    <th><i class="bi bi-gear me-2"></i>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for quiz in quizzes %}
+                                <tr>
+                                    <td>{{ quiz.title }}</td>
+                                    <td>{{ quiz.chapter.name }}</td>
+                                    <td>{{ quiz.chapter.subject.name }}</td>
+                                    <td>{{ quiz.date_of_quiz.strftime('%Y-%m-%d') }}</td>
+                                    <td class="text-nowrap">
+                                        <a href="{{ url_for('user.attempt_quiz', quiz_id=quiz.id) }}" 
+                                           class="btn btn-sm btn-primary btn-action">
+                                           <i class="bi bi-pencil-square"></i> Attempt
+                                        </a>
+                                        <a href="{{ url_for('user.quiz_results', quiz_id=quiz.id) }}" 
+                                           class="btn btn-sm btn-info ms-1 btn-action">
+                                           <i class="bi bi-graph-up"></i> Results
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        No quizzes found matching your search criteria.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics & Attempts Section -->
+        <div class="col-md-4">
+            <div class="card shadow-lg border-0 rounded-3 mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Your Quiz Statistics
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <div class="display-6 text-primary">
+                            <i class="bi bi-bullseye me-2"></i>{{ total_attempts }}
+                        </div>
+                        <div class="text-muted">Total Attempts</div>
+                    </div>
+                    <div>
+                        <div class="display-6 text-success">
+                            <i class="bi bi-trophy me-2"></i>{{ average_score|round(2) }}%
+                        </div>
+                        <div class="text-muted">Average Score</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-lg border-0 rounded-3 recent-attempts">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Recent Attempts
+                    </h4>
+                </div>
+                <div class="card-body p-0">
+                    {% if scores %}
+                    <div class="list-group list-group-flush">
+                        {% for score in scores[:5] %}
+                        <a href="{{ url_for('user.quiz_results', quiz_id=score.quiz_id) }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <i class="bi bi-list-check me-2 text-primary"></i>
+                                    {{ score.quiz.title }}
+                                </h6>
+                                <small>{{ score.time_stamp_of_attempt.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <div class="progress mt-2">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {{ score.percentage }}%"></div>
+                            </div>
+                            <small class="text-muted">
+                                {{ score.score }}/{{ score.total_questions }} ({{ score.percentage|round(2) }}%)
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info m-3 text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No quiz attempts yet
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

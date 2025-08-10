@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Quiz Questions{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Questions for Quiz</h1>
+    <div class="mb-3">
+        <h4>{{ quiz.chapter.subject.name }} - {{ quiz.chapter.name }}</h4>
+        <p>Date: {{ quiz.date_of_quiz.strftime('%d-%m-%Y') }} | Duration: {{ quiz.time_duration }}</p>
+        <p>{{ quiz.remarks }}</p>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <!-- Add New Question Button -->
+            <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+                Add New Question
+            </button>
+            
+            <!-- Questions Table -->
+            <div class="card">
+                <div class="card-body">
+                    <p class="mb-3">Total Questions: {{ questions|length }}</p>
+                    
+                    {% if questions %}
+                        {% for question in questions %}
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Question {{ loop.index }}</h5>
+                                <div>
+                                    <!-- Edit Button -->
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                            data-bs-target="#editQuestionModal" 
+                                            data-id="{{ question.id }}"
+                                            data-statement="{{ question.question_statement }}"
+                                            data-option1="{{ question.option1 }}"
+                                            data-option2="{{ question.option2 }}"
+                                            data-option3="{{ question.option3 }}"
+                                            data-option4="{{ question.option4 }}"
+                                            data-correct="{{ question.correct_option }}">
+                                        Edit
+                                    </button>
+                                    <!-- Delete Button -->
+                                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" 
+                                            data-bs-target="#deleteQuestionModal" 
+                                            data-id="{{ question.id }}">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ question.question_statement }}</p>
+                                <div class="options-list">
+                                    {% for i in range(1, 5) %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" disabled 
+                                               {% if question.correct_option == i %}checked{% endif %}>
+                                        <label class="form-check-label">
+                                            {{ question['option' ~ i] }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No questions have been added to this quiz yet. Use the "Add New Question" button to create questions.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Back to Quizzes Button -->
+    <div class="mt-4">
+        <a href="{{ url_for('admin.manage_quizzes') }}" class="btn btn-secondary">Back to Quizzes</a>
+    </div>
+</div>
+
+<!-- Add Question Modal -->
+<div class="modal fade" id="addQuestionModal" tabindex="-1" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addQuestionModalLabel">Add New Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_question', quiz_id=quiz.id) }}">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="question_text" class="form-label">Question</label>
+                        <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
+                    </div>
+                    {% for i in range(1, 5) %}
+                    <div class="mb-3">
+                        <label for="option{{ i }}" class="form-label">Option {{ i }}</label>
+                        <input type="text" class="form-control" id="option{{ i }}" name="option{{ i }}" required>
+                    </div>
+                    {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label">Correct Option</label>
+                        {% for i in range(1, 5) %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="correct_option" id="correct{{ i }}" value="{{ i }}" {% if i == 1 %}required{% endif %}>
+                            <label class="form-check-label" for="correct{{ i }}">
+                                Option {{ i }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Question</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div class="modal fade" id="editQuestionModal" tabindex="-1" aria-labelledby="editQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editQuestionModalLabel">Edit Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.edit_question', quiz_id=quiz.id) }}">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <input type="hidden" name="question_id" id="edit_question_id">
+                    <div class="mb-3">
+                        <label for="edit_question_text" class="form-label">Question</label>
+                        <textarea class="form-control" id="edit_question_text" name="question_text" rows="3" required></textarea>
+                    </div>
+                    {% for i in range(1, 5) %}
+                    <div class="mb-3">
+                        <label for="edit_option{{ i }}" class="form-label">Option {{ i }}</label>
+                        <input type="text" class="form-control" id="edit_option{{ i }}" name="option{{ i }}" required>
+                    </div>
+                    {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label">Correct Option</label>
+                        {% for i in range(1, 5) %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="correct_option" id="edit_correct{{ i }}" value="{{ i }}" {% if i == 1 %}required{% endif %}>
+                            <label class="form-check-label" for="edit_correct{{ i }}">
+                                Option {{ i }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Update Question</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Delete Question Modal -->
+<div class="modal fade" id="deleteQuestionModal" tabindex="-1" aria-labelledby="deleteQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuestionModalLabel">Delete Question</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this question?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('admin.delete_question', quiz_id=quiz.id) }}">
+                    {{ form.csrf_token }}
+                    <input type="hidden" name="question_id" id="delete_question_id">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Edit Question Modal
+        const editQuestionModal = document.getElementById('editQuestionModal');
+        editQuestionModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const statement = button.getAttribute('data-statement');
+            const option1 = button.getAttribute('data-option1');
+            const option2 = button.getAttribute('data-option2');
+            const option3 = button.getAttribute('data-option3');
+            const option4 = button.getAttribute('data-option4');
+            const correct = button.getAttribute('data-correct');
+            
+            document.getElementById('edit_question_id').value = id;
+            document.getElementById('edit_question_text').value = statement;  // Updated ID
+            document.getElementById('edit_option1').value = option1;
+            document.getElementById('edit_option2').value = option2;
+            document.getElementById('edit_option3').value = option3;
+            document.getElementById('edit_option4').value = option4;
+            
+            // Set the correct radio button
+            document.getElementById(`edit_correct${correct}`).checked = true;
+        });
+        
+        // Delete Question Modal
+        const deleteQuestionModal = document.getElementById('deleteQuestionModal');
+        deleteQuestionModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            document.getElementById('delete_question_id').value = id;
+        });
+    });
+</script>
+{% endblock %}

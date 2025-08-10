@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Quizzes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Quizzes</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <!-- Add New Quiz Button -->
+            <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addQuizModal">
+                Add New Quiz
+            </button>
+            
+            <!-- Quizzes Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3 row">
+                        <div class="col-md-6">
+                            <label for="subjectFilter" class="form-label">Filter by Subject:</label>
+                            <select class="form-select" id="subjectFilter">
+                                <option value="">All Subjects</option>
+                                {% for subject in subjects %}
+                                <option value="{{ subject.id }}">{{ subject.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="chapterFilter" class="form-label">Filter by Chapter:</label>
+                            <select class="form-select" id="chapterFilter" disabled>
+                                <option value="">Select Subject First</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Chapter</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                                <th>Duration</th>
+                                <th>Questions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quiz in quizzes %}
+                            <tr data-subject="{{ quiz.chapter.subject_id }}" data-chapter="{{ quiz.chapter_id }}">
+                                <td>{{ quiz.id }}</td>
+                                <td>{{ quiz.chapter.name }}</td>
+                                <td>{{ quiz.chapter.subject.name }}</td>
+                                <td>{{ quiz.date_of_quiz.strftime('%d-%m-%Y') }}</td>
+                                <td>{{ quiz.time_duration }}</td>
+                                <td>
+                                    {{ quiz.questions|length }}
+                                    <a href="{{ url_for('admin.manage_questions', quiz_id=quiz.id) }}" class="btn btn-sm btn-info">Manage</a>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                            data-bs-target="#editQuizModal" 
+                                            data-id="{{ quiz.id }}"
+                                            data-chapter="{{ quiz.chapter_id }}"
+                                            data-subject="{{ quiz.chapter.subject_id }}"
+                                            data-date="{{ quiz.date_of_quiz.strftime('%Y-%m-%d') }}"
+                                            data-duration="{{ quiz.time_duration }}"
+                                            data-remarks="{{ quiz.remarks }}">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" 
+                                            data-bs-target="#deleteQuizModal" 
+                                            data-id="{{ quiz.id }}"
+                                            data-chapter="{{ quiz.chapter.name }}">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Quiz Modal -->
+<div class="modal fade" id="addQuizModal" tabindex="-1" aria-labelledby="addQuizModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addQuizModalLabel">Add New Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_quiz') }}">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="subject_id" class="form-label">Subject</label>
+                        <select class="form-select" id="subject_id" name="subject_id" required>
+                            <option value="">Select Subject</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="chapter_id" class="form-label">Chapter</label>
+                        <select class="form-select" id="chapter_id" name="chapter_id" required>
+                            <option value="">Select Subject First</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Quiz Title</label>
+                        {{ form.title(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="date_of_quiz" class="form-label">Quiz Date</label>
+                        {{ form.date_of_quiz(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Duration (HH:MM)</label>
+                        {{ form.duration(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks (Optional)</label>
+                        {{ form.remarks(class="form-control") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Quiz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Dynamic Chapter Population -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const subjectSelect = document.getElementById('subject_id'); // ✅ Correct ID
+        const chapterSelect = document.getElementById('chapter_id'); // ✅ Correct ID
+
+        if (subjectSelect && chapterSelect) {
+            subjectSelect.addEventListener('change', function() {
+                const subjectId = this.value;
+                chapterSelect.innerHTML = '<option value="">Select Chapter</option>';
+                
+                if (subjectId) {
+                    fetch(`/admin/get_chapters?subject_id=${subjectId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Chapters fetched:', data); // Debugging
+                            data.forEach(chapter => {
+                                const option = document.createElement('option');
+                                option.value = chapter.id;
+                                option.textContent = chapter.name;
+                                chapterSelect.appendChild(option);
+                            });
+                            chapterSelect.disabled = false;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching chapters:', error); // Debugging
+                        });
+                } else {
+                    chapterSelect.disabled = true;
+                }
+            });
+        }
+    });
+</script>
+
+<!-- Edit Quiz Modal -->
+<div class="modal fade" id="editQuizModal" tabindex="-1" aria-labelledby="editQuizModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editQuizModalLabel">Edit Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editQuizForm">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <input type="hidden" name="quiz_id" id="edit_quiz_id">
+                    <div class="mb-3">
+                        <label for="edit_subject_select" class="form-label">Subject</label>
+                        <select class="form-select" id="edit_subject_select" name="subject_id" required>
+                            <option value="">Select Subject</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject.id }}">{{ subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_chapter_id" class="form-label">Chapter</label>
+                        <select class="form-select" id="edit_chapter_id" name="chapter_id" required>
+                            <option value="">Select Subject First</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_date_of_quiz" class="form-label">Quiz Date</label>
+                        <input type="date" class="form-control" id="edit_date_of_quiz" name="date_of_quiz" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_time_duration" class="form-label">Duration (HH:MM)</label>
+                        <input type="text" class="form-control" id="edit_time_duration" name="time_duration" 
+                               placeholder="00:30" pattern="[0-9]{2}:[0-9]{2}" required>
+                        <small class="form-text text-muted">Format: HH:MM (e.g., 00:30 for 30 minutes)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_remarks" class="form-label">Remarks (Optional)</label>
+                        <textarea class="form-control" id="edit_remarks" name="remarks"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Update Quiz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Quiz Modal -->
+<div class="modal fade" id="deleteQuizModal" tabindex="-1" aria-labelledby="deleteQuizModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuizModalLabel">Delete Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the quiz for chapter "<span id="delete_quiz_chapter"></span>"?</p>
+                <p class="text-danger">This will also delete all questions associated with this quiz!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('admin.delete_quiz', quiz_id=0) }}" id="deleteQuizForm">
+                    {{ form.csrf_token }}
+                    <input type="hidden" name="quiz_id" id="delete_quiz_id">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Subject and Chapter Filters
+        const subjectFilter = document.getElementById('subjectFilter');
+        const chapterFilter = document.getElementById('chapterFilter');
+        const addSubjectSelect = document.getElementById('subject_id');
+        const addChapterSelect = document.getElementById('chapter_id');
+        const editSubjectSelect = document.getElementById('edit_subject_select');
+        const editChapterSelect = document.getElementById('edit_chapter_id');
+
+        // Function to populate chapters based on selected subject
+        function populateChapters(subjectId, chapterSelect) {
+            fetch(`/admin/get_chapters?subject_id=${subjectId}`)
+                .then(response => response.json())
+                .then(data => {
+                    chapterSelect.innerHTML = '<option value="">Select Chapter</option>';
+                    data.forEach(chapter => {
+                        const option = document.createElement('option');
+                        option.value = chapter.id;
+                        option.textContent = chapter.name;
+                        chapterSelect.appendChild(option);
+                    });
+                    chapterSelect.disabled = false;
+                })
+                .catch(error => console.error('Error fetching chapters:', error));
+        }
+
+        // Add Quiz Modal: Subject Change
+        addSubjectSelect.addEventListener('change', function() {
+            const subjectId = this.value;
+            if (subjectId) {
+                populateChapters(subjectId, addChapterSelect);
+            } else {
+                addChapterSelect.innerHTML = '<option value="">Select Subject First</option>';
+                addChapterSelect.disabled = true;
+            }
+        });
+
+        // Edit Quiz Modal: Subject Change
+        editSubjectSelect.addEventListener('change', function() {
+            const subjectId = this.value;
+            if (subjectId) {
+                populateChapters(subjectId, editChapterSelect);
+            } else {
+                editChapterSelect.innerHTML = '<option value="">Select Subject First</option>';
+                editChapterSelect.disabled = true;
+            }
+        });
+
+        // Subject Filter Change
+        subjectFilter.addEventListener('change', function() {
+            const selectedSubjectId = this.value;
+            const chapterRows = document.querySelectorAll('tbody tr');
+            
+            chapterRows.forEach(row => {
+                if (!selectedSubjectId || row.getAttribute('data-subject') === selectedSubjectId) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Chapter Filter Change
+        chapterFilter.addEventListener('change', function() {
+            const selectedChapterId = this.value;
+            const chapterRows = document.querySelectorAll('tbody tr');
+            
+            chapterRows.forEach(row => {
+                if (!selectedChapterId || row.getAttribute('data-chapter') === selectedChapterId) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Edit Quiz Modal: Populate Data
+        const editQuizModal = document.getElementById('editQuizModal');
+        editQuizModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const chapterId = button.getAttribute('data-chapter');
+            const subjectId = button.getAttribute('data-subject');
+            const date = button.getAttribute('data-date');
+            const duration = button.getAttribute('data-duration');
+            const remarks = button.getAttribute('data-remarks');
+
+            // Update the form action with the correct quiz_id
+            const editQuizForm = document.getElementById('editQuizForm');
+            editQuizForm.action = "{{ url_for('admin.edit_quiz', quiz_id=0) }}".replace("0", id);
+
+            // Populate the form fields
+            document.getElementById('edit_quiz_id').value = id;
+            document.getElementById('edit_subject_select').value = subjectId;
+            populateChapters(subjectId, editChapterSelect);
+            setTimeout(() => {
+                document.getElementById('edit_chapter_id').value = chapterId;
+            }, 100);
+            document.getElementById('edit_date_of_quiz').value = date;
+            document.getElementById('edit_time_duration').value = duration;
+            document.getElementById('edit_remarks').value = remarks;
+        });
+
+        // Delete Quiz Modal: Populate Data
+        const deleteQuizModal = document.getElementById('deleteQuizModal');
+        deleteQuizModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const chapterName = button.getAttribute('data-chapter');
+
+            // Update the form action with the correct quiz_id
+            const deleteQuizForm = document.getElementById('deleteQuizForm');
+            deleteQuizForm.action = "{{ url_for('admin.delete_quiz', quiz_id=0) }}".replace("0", id);
+
+            // Update the modal content
+            document.getElementById('delete_quiz_id').value = id;
+            document.getElementById('delete_quiz_chapter').textContent = chapterName;
+        });
+    });
+</script>
+{% endblock %}

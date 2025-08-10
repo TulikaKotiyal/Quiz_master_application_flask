@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block head %}
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <style>
+        .dashboard-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .card-header-custom {
+            border-radius: 10px 10px 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+        .progress-thin {
+            height: 6px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">
+        <i class="bi bi-speedometer2 me-2"></i>Admin Dashboard
+    </h1>
+    
+    <!-- Stats Cards Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card dashboard-card text-white bg-primary">
+                <div class="card-body text-center py-4">
+                    <div class="stat-number">{{ stats.total_subjects }}</div>
+                    <p class="mb-0">Total Subjects</p>
+                    <a href="{{ url_for('admin.manage_subjects') }}" class="btn btn-sm btn-light mt-3">
+                        <i class="bi bi-gear me-1"></i> Manage
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card text-white bg-success">
+                <div class="card-body text-center py-4">
+                    <div class="stat-number">{{ stats.total_chapters }}</div>
+                    <p class="mb-0">Total Chapters</p>
+                    <a href="{{ url_for('admin.manage_chapters') }}" class="btn btn-sm btn-light mt-3">
+                        <i class="bi bi-gear me-1"></i> Manage
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card text-white bg-info">
+                <div class="card-body text-center py-4">
+                    <div class="stat-number">{{ stats.total_quizzes }}</div>
+                    <p class="mb-0">Total Quizzes</p>
+                    <a href="{{ url_for('admin.manage_quizzes') }}" class="btn btn-sm btn-light mt-3">
+                        <i class="bi bi-gear me-1"></i> Manage
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card text-white bg-warning">
+                <div class="card-body text-center py-4">
+                    <div class="stat-number">{{ stats.total_users }}</div>
+                    <p class="mb-0">Total Users</p>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-sm btn-light mt-3">
+                        <i class="bi bi-people me-1"></i> View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Attempts Section -->
+    <div class="card dashboard-card mb-4">
+        <div class="card-header card-header-custom bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-history me-2"></i>Recent Quiz Attempts
+            </h5>
+            <span class="badge bg-light text-dark">
+                {{ stats.quizzes_attempted }} total attempts
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Quiz</th>
+                            <th>Score</th>
+                            <th>Attempted On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_scores %}
+                            {% for score in recent_scores %}
+                            <tr>
+                                <td>{{ score.user.full_name }}</td>
+                                <td>
+                                    <strong>{{ score.quiz.title }}</strong><br>
+                                    <small class="text-muted">
+                                        {{ score.quiz.chapter.subject.name }} > {{ score.quiz.chapter.name }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if score.percentage >= 50 else 'danger' }}">
+                                        {{ score.score }}/{{ score.total_questions }}
+                                    </span>
+                                    <small>({{ score.percentage|round(1) }}%)</small>
+                                </td>
+                                <td>{{ score.time_stamp_of_attempt.strftime('%b %d, %Y %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No quiz attempts yet</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions and System Summary -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card dashboard-card">
+                <div class="card-header card-header-custom bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.manage_subjects') }}" class="btn btn-outline-primary text-start">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Subject
+                        </a>
+                        <a href="{{ url_for('admin.manage_chapters') }}" class="btn btn-outline-success text-start">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Chapter
+                        </a>
+                        <a href="{{ url_for('admin.manage_quizzes') }}" class="btn btn-outline-info text-start">
+                            <i class="bi bi-plus-circle me-2"></i>Create New Quiz
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card dashboard-card">
+                <div class="card-header card-header-custom bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>System Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Performance Chart
+    const ctx = document.getElementById('performanceChart');
+    if (ctx) {
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Users', 'Subjects', 'Chapters', 'Quizzes', 'Attempts'],
+                datasets: [{
+                    label: 'System Statistics',
+                    data: JSON.parse('{{ [stats.total_users, stats.total_subjects, stats.total_chapters, stats.total_quizzes, stats.quizzes_attempted] | tojson | safe }}'),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

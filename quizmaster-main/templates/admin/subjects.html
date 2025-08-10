@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Subjects{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Subjects</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+                Add New Subject
+            </button>
+            
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Chapters</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in subjects %}
+                            <tr>
+                                <td>{{ subject.id }}</td>
+                                <td>{{ subject.name }}</td>
+                                <td>{{ subject.description }}</td>
+                                <td>{{ subject.chapters|length }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                            data-bs-target="#editSubjectModal" 
+                                            data-id="{{ subject.id }}"
+                                            data-name="{{ subject.name }}"
+                                            data-description="{{ subject.description }}">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" 
+                                            data-bs-target="#deleteSubjectModal" 
+                                            data-id="{{ subject.id }}"
+                                            data-name="{{ subject.name }}">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1" aria-labelledby="addSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSubjectModalLabel">Add New Subject</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.manage_subjects') }}">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Subject Name</label>
+                        {{ form.name(class="form-control", id="name", required=true) }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        {{ form.description(class="form-control", id="description", required=true) }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Subject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1" aria-labelledby="editSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editSubjectModalLabel">Edit Subject</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editSubjectForm">
+                <div class="modal-body">
+                    {{ form.csrf_token }}
+                    <input type="hidden" name="subject_id" id="edit_subject_id">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Subject Name</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit_description" name="description" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Update Subject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Subject Modal -->
+<div class="modal fade" id="deleteSubjectModal" tabindex="-1" aria-labelledby="deleteSubjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title" id="deleteSubjectModalLabel">Delete Subject</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+              <p>Are you sure you want to delete the subject "<span id="delete_subject_name"></span>"?</p>
+              <p class="text-danger">This will also delete all chapters, quizzes, and questions associated with this subject!</p>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <form method="POST" action="{{ url_for('admin.delete_subject', subject_id=0) }}" id="deleteSubjectForm">
+                  {{ form.csrf_token }}
+                  <input type="hidden" name="subject_id" id="delete_subject_id">
+                  <button type="submit" class="btn btn-danger">Delete</button>
+              </form>
+          </div>
+      </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // Delete Subject Modal
+      const deleteSubjectModal = document.getElementById('deleteSubjectModal');
+      deleteSubjectModal.addEventListener('show.bs.modal', function(event) {
+          const button = event.relatedTarget;
+          const id = button.getAttribute('data-id');
+          const name = button.getAttribute('data-name');
+          
+          // Update the form action with the correct subject_id
+          const deleteSubjectForm = document.getElementById('deleteSubjectForm');
+          deleteSubjectForm.action = "{{ url_for('admin.delete_subject', subject_id=0) }}".replace("0", id);
+          
+          document.getElementById('delete_subject_id').value = id;
+          document.getElementById('delete_subject_name').textContent = name;
+      });
+  });
+</script>
+{% endblock %}
